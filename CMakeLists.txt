@@ -9,8 +9,17 @@ include(version.cmake)
 include(config.cmake)
 include(dependency.cmake)
 
+set(BGHT_INCLUDE_DIR "/work1/aicao/duhao/BGHT_HashTable/BGHT-hip")
+include_directories(${BGHT_INCLUDE_DIR})
+
 if (KMC_HIP_ENABLE_FLAG)
     enable_language(HIP)
+    option(DEBUG_MODE_GPU "Enable debug mode (print debug info)" OFF)
+    # ON or OFF
+    message("debug mode is $DEBUG_MODE_GPU")
+    if(DEBUG_MODE_GPU)
+        #add_compile_definitions(DEBUG_MODE_GPU)
+    endif()
     add_subdirectory(gpu)
 endif ()
 

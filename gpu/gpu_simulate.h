@@ -8,6 +8,8 @@
 #include <cassert>
 #include <iostream>
 #include <hiprand/hiprand_kernel.h>
+#include "global_var.h"
+
 
 #include <logs/logs.h>
 #include "../models/abvi/kmc.h"

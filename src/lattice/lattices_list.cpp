@@ -377,32 +377,31 @@ void LatticesList::update_hash_CPU(){
     momo_hash.clear();
     re_hash.clear();
     vac_hash.clear();
-    // printf("\nMoRe: ");
+    printf("\nMoRe: ");
     this->MoRe_Hash->copyToHost(more_hash);
-    // printf("MoMo: ");
+    printf("MoMo: ");
     this->MoMo_Hash->copyToHost(momo_hash);
-    // printf("Re: ");
+    printf("Re: ");
     this->Re_Hash->copyToHost(re_hash);
 
     
 
     std::unordered_set<_type_lattice_id> tmp_vac_set;
-    // printf("Vac: ");
+    printf("Vac: ");
     this->V_Hash->copyToHost(tmp_vac_set);
-
     for (const auto &key : tmp_vac_set) {
         vac_hash[key] = VacancyHash{};
     }
-    // printf("_______________MORE BEGIN_______________\n");
-    // for(auto i:more_hash)
-    //   printf("%ld\t",i);
-    // printf("\n");
-    // printf("_________________________________________\n");
-    // printf("_______________MOMO BEGIN_______________\n");
-    // for(auto i:momo_hash)
-    //   printf("%ld\t",i);
-    // printf("\n");
-    // printf("_________________________________________\n");
+    printf("_______________MORE BEGIN_______________\n");
+    for(auto i:more_hash)
+      printf("%ld\t",i);
+    printf("\n");
+    printf("_________________________________________\n");
+    printf("_______________MOMO BEGIN_______________\n");
+    for(auto i:momo_hash)
+      printf("%ld\t",i);
+    printf("\n");
+    printf("_________________________________________\n");
   
 }
 void LatticesList::updateGpuInfo(_type_lattice_id& to_x, _type_lattice_id& to_y, _type_lattice_id& to_z, dev_nnLattice *h_nnneighbour_temp) {
@@ -573,6 +572,14 @@ LatticeTypes::lat_type LatticesList::getType(const _type_lattice_id& latti_id) {
 LatticeTypes::lat_type LatticesList::setType(const _type_lattice_id& latti_id,long int new_type){
   long int current_Type = getType(latti_id);
   VacancyHash vachash;
+  if(current_Type == LatticeTypes::V){
+    auto& firstIt = *vac_hash.begin();
+    _type_lattice_id oldKey = firstIt.first;
+    VacancyHash& value = firstIt.second;
+      VacancyHash tempValue = value;  // 复制值（或移动语义：std::move(value)）
+      vac_hash.erase(oldKey);
+      vac_hash[latti_id] = std::move(tempValue);  // 移动赋值（若VacancyHash支持）
+  }
   switch(current_Type){
     case LatticeTypes::V:
       break;
@@ -603,6 +610,7 @@ LatticeTypes::lat_type LatticesList::setType(const _type_lattice_id& latti_id,lo
     case LatticeTypes::Mo:
       break;
   }
-  return LatticeTypes::V;
+  LatticeTypes::lat_type A;
+  return A;
 }
 

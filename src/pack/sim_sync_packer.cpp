@@ -128,6 +128,21 @@ void SimSyncPacker::onSend2(ChangeLattice *buffer, std::array<std::unordered_set
 
       // buffer[len++] = lattice;
     }
+    
+    // 发送 Surface 区域的原子 (所有维度通用)
+    for (const auto& pair : now_exchange_surface_x) {
+      _type_lattice_size latti_x = pair % lats->meta.size_x;
+      _type_lattice_size latti_y = (pair / lats->meta.size_x) % lats->meta.size_y;
+      _type_lattice_size latti_z = pair / (lats->meta.size_x * lats->meta.size_y);
+      buffer[len].x = latti_x;
+      buffer[len].y = latti_y;
+      buffer[len].z = latti_z;
+      
+      // 确定原子类型
+      buffer[len].type._type = lats->getType(pair);
+      
+      len++;
+    }
   } else if(dimension == 1) {
     for (const auto& latticeId : exchange_ghost[4]) {
       buffer[len].x = latticeId % lats->meta.size_x;

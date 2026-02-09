@@ -2,13 +2,18 @@
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
+
 add_library(${KMC_GPU_LIB_NAME} STATIC
+        global_var.h
+        print_function.hip
         gpu_simulate.hip
         gpu_simulate.h
         gpuError.hip
         gpuError.h
         DeviceVacRatesSolver.h
         DeviceVacRatesSolver.cpp
+        cal_utils.hip
+        gpu_hash_op.hip
         )
 
 target_compile_options(${KMC_GPU_LIB_NAME} PRIVATE -D__HIP_PLATFORM_HCC__= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP  -D__HIP__ -D__HIP_PLATFORM_AMD__= -I"${ROCM_PATH}/hip/include" -I"${ROCM_PATH}/llvm/lib/clang/14.0.0" -I${ROCM_PATH}/hsa/include)

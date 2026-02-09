@@ -65,7 +65,7 @@ HIPHashSet::HIPHashSet(const std::unordered_set<long int>& cpu_set,int size){
     int set_size = cpu_set.size() + size;
     if (set_size == 0) set_size = 1;
 
-    h_table.capacity = set_size * 2;  // 保持装载因子 ~0.5
+    h_table.capacity = set_size * 2 + 100;  // 保持装载因子 ~0.5
     h_table.empty_flag = INIT_FLAG;
     h_table.tombstone_flag = TOMBSTONE;
 
@@ -118,7 +118,7 @@ HIPHashSet::HIPHashSet(const std::unordered_set<long int>& cpu_set,int size){
 // **构造函数：指定容量**
 HIPHashSet::HIPHashSet(int size) {
   // 设置容量为 size * 2，保持装载因子约 0.5
-  h_table.capacity = size * 2;
+  h_table.capacity = size * 2 + 100;
   h_table.empty_flag = INIT_FLAG;
   h_table.tombstone_flag = TOMBSTONE;
 
@@ -174,20 +174,24 @@ HIPHashSet::~HIPHashSet() {
 
 
 int init_ChangeLattice_GPU(ChangeLattice *buffer,ChangeLattice_GPU *h_buffer,int len){
-
-    // printf("------this is buffer data-------------\n");
+    #ifdef DEBUG_MODE_GPU
+        printf("------this is buffer data-------------\n");
+    #endif
     for(int i=0;i<len;i++){
         h_buffer[i].x = buffer[i].x;
         h_buffer[i].y = buffer[i].y;
         h_buffer[i].z = buffer[i].z;
         h_buffer[i].type = buffer[i].type._type;
-        // printf("h_buffer data (%ld,%ld,%ld)-%ld\t",h_buffer[i].x,h_buffer[i].y,h_buffer[i].z,h_buffer[i].type);
+        #ifdef DEBUG_MODE_GPU
+            printf("h_buffer data (%ld,%ld,%ld)-%ld\t",h_buffer[i].x,h_buffer[i].y,h_buffer[i].z,h_buffer[i].type);
+        #endif
         // if(i%10 == 0)
         // printf("\n");
     }
      // printf("\n");
-    // printf("------ end buffer data----------------\n");
-
+    #ifdef DEBUG_MODE_GPU
+        printf("------ end buffer data----------------\n");
+    #endif
     return 1;
 }
 
@@ -257,7 +261,7 @@ void HIPHashSet::copyToHost(std::unordered_set<_type_lattice_id> &cpu_hash){
            hash_num++;
         }
     }
-    //  printf("this key num is %ld\n",hash_num);
+     printf("this key num is %ld\n",hash_num);
      hipDeviceSynchronize();
     // HANDLE_HIP(hipMemcpy(h_ghost_Hash, ghost_Hash->device_ptr()->keys, ghost_Hash->device_ptr()->capacity*sizeof(long int), hipMemcpyDeviceToHost));
 }
