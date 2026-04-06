@@ -33,7 +33,7 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
   double time_barrier_total = 0.0;
   double local_to_total = 0.0;
 
-  p_event_hooks->onStepFinished(0);
+  // p_event_hooks->onStepFinished(0);
   if(SimulationDomain::comm_sim_pro.own_rank == 0) {
     kiwi::logs::v(" ", " rank id is : {} x dimension divided is : {} y dimension divided is : {} z dimension divided is : {}.\n", 
     SimulationDomain::comm_sim_pro.own_rank, 
@@ -44,7 +44,8 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
   MPI_Barrier(SimulationDomain::comm_sim_pro.comm);
   // 扇区的执行顺序是 0, 7, 2, 5, 3, 4, 1, 6
   time_total_start = MPI_Wtime();
-  for (int64_t step = 0; step < time_steps; step++) { // time steps loop
+  const int64_t TEST_STEPS = 1;
+  for (int64_t step = 0; step < TEST_STEPS; step++) { // time steps loop
   //if (step % 100 == 0) kiwi::logs::v(" ", " step is : {} .\n", step);
     for (int sect = 0; sect < SECTORS_NUM; sect++) {      // sector loop SECTORS_NUM = 8 依据同步子域算法，在每个进程的区域内再进行子域的划分(一个8个子域)
       const double step_threshold_time = static_cast<double>(step + 1) * T - sec_meta.sector_itl->evolution_time; 

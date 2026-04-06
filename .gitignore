@@ -1,6 +1,9 @@
 vendor
 pkg.dep.cmake
 coverage
+build/
+pkg
+vendor.tar*
 
 # General for mac
 .DS_Store
