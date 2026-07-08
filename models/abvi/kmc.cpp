@@ -17,6 +17,10 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+
+#ifndef SHOW_GPU_LOG
+    #define printf(...) ((void)0)
+#endif
 ABVIModel::ABVIModel(Box *box, double v, double T) : box(box), v(v), T(T) {}
 
 // 这个函数的主要作用是计算指定仿真区域内的某种类型的迁移速率（transition rates）。

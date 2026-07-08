@@ -3,6 +3,8 @@
 
 #include "hip/hip_runtime.h"
 #include <hip/hip_runtime.h>
+#include <hip/hip_cooperative_groups.h>
+
 #include "gpuError.h"
 #include "DeviceVacRatesSolver.h"
 #include <cassert>
@@ -62,6 +64,14 @@ void transferBufferToGPU(ChangeLattice *buffer, int receive_len, const int dimen
   const _type_lattice_count *sub_box_lattice_size, const _type_lattice_count *neighbour_local_sub_box, unsigned int id);
 void transferBufferToGPU2(ChangeLattice *buffer, int receive_len, const int dimension,
   const _type_lattice_count *sub_box_lattice_size, const _type_lattice_count *neighbour_local_sub_box, unsigned int next_id);
+// 线程事务状态机结构体
+struct AtomTx {
+    _type_lattice_id src_id;   // 原原子ID
+    _type_lattice_id dst_id;   // 目标位置ID
+    bool active;               // 是否仍在活跃（活没干完）
+    bool success;              // 本轮物理交换是否成功
+    int op_type;               // 反应类型：1-移动，2-身份转换...
+};
 // __global__ void calcExchangePairs(dev_meta meta,long int *Pair_Atoms,
 //                             HIPHashSet *MoRe_Hash,HIPHashSet *MoMo_Hash,
 //                             HIPHashSet *Re_Hash,HIPHashSet *V_Hash,

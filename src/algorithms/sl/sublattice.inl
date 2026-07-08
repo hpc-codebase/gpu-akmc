@@ -23,6 +23,7 @@
 
 template <class PKg, class PKs, class Ins, typename E>
 void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks *p_event_hooks) {
+  std::cout<<"start time loop"<<std::endl;
   const int64_t time_steps = ceil(time_limit / T); // T 是写死的3e-7，time_limit是config.yaml文件中的physics_time
   double time_total_start, time_total_end;
   double time_start, time_end;
@@ -32,6 +33,8 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
   double time_interval_trans_total = 0.0;
   double time_barrier_total = 0.0;
   double local_to_total = 0.0;
+  double time_core_compute_total = 0.0; 
+  double time_core_start;
 
   // p_event_hooks->onStepFinished(0);
   if(SimulationDomain::comm_sim_pro.own_rank == 0) {
@@ -52,7 +55,7 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
       double sector_time = 0.0;
       p_model->clear_exchange_ghost();
       p_model->clear_exchange_surface((*sec_meta.sector_itl).id);
-      if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " step is : {} sect is : {} starting !!!.\n", step, sect);
+      // if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " step is : {} sect is : {} starting !!!.\n", step, sect);
       for(int ir = 0; ir < 1; ir++) {
         //TODO:对这个地方的代码GPU化
       // while (sector_time < step_threshold_time) { // note: step_threshold_time may be less then 0.0
@@ -80,7 +83,9 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
           sector_time += delta_t;
         }
         // time_start = MPI_Wtime();
+        time_core_start = MPI_Wtime();
         recbPerformWrapper(p_model, (*sec_meta.sector_itl).id);
+        time_core_compute_total += MPI_Wtime() - time_core_start;
         // time_end = MPI_Wtime() - time_start;
         // time_interval_trans_total += time_end;
         // todo: time comparing, nearest principle based on predicting
@@ -129,6 +134,11 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
 
   MPI_Reduce(&time_total_end, &local_to_total, 1, MPI_DOUBLE, MPI_MAX, 0, SimulationDomain::comm_sim_pro.comm);
   if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " total time is : {} s. \n", local_to_total);
+  double local_core_total = 0.0;
+  MPI_Reduce(&time_core_compute_total, &local_core_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  if(SimulationDomain::comm_sim_pro.own_rank == 0) {
+      kiwi::logs::v(" ", " >>> [Performance] Core Compute Time (recb) is : {} s. \n", local_core_total / SimulationDomain::comm_sim_pro.all_ranks);
+  }
   //  MPI_Reduce(&time_vac_calculate_total, &local_to_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
   // if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " vac_calculate time is : {} s. \n", local_to_total / SimulationDomain::comm_sim_pro.all_ranks);
 
@@ -459,9 +469,9 @@ template <class PKs, class Ins> void SubLattice::syncSimRegions(Ins &pk_inst, st
     // int receive_len = recv_regions[dim_id];
     // printf("start transfer\n");
     // if(num_receive[dim_id] -1 > 0)
-    for(int i=0;i<num_receive[dim_id];i++)
-      printf("r_buffer (%ld,%ld,%ld)\t",receive_buff[i].x,receive_buff[i].y,receive_buff[i].z);
-    printf("\n");
+    // for(int i=0;i<num_receive[dim_id];i++)
+    //   printf("r_buffer (%ld,%ld,%ld)\t",receive_buff[i].x,receive_buff[i].y,receive_buff[i].z);
+    // printf("\n");
     packer.transfer_buffer_to_GPU(receive_buff, num_receive[dim_id], dim_id, p_domain->sub_box_lattice_size, p_domain->neighbour_local_sub_box, cur_sector.id);
     packer.onReceive2(receive_buff, recv_regions[dim_id], num_receive[dim_id], dim_id, exchange_ghost, 
                       p_domain->sub_box_lattice_size, p_domain->neighbour_local_sub_box, cur_sector.id, 
@@ -588,9 +598,9 @@ template <class PKg, class Ins> void SubLattice::syncNextSectorGhostRegions(Ins 
     int receive_len = num_receive[dim_id];
 
     // printf("ghost dim id is %d,next_sector.id: %d\n",dim_id,next_sector.id);
-    for(int i=0;i<num_receive[dim_id];i++)
-      printf("ss_buffer (%ld,%ld,%ld)\t",receive_buff[i].x,receive_buff[i].y,receive_buff[i].z);
-    printf("\n");
+    // for(int i=0;i<num_receive[dim_id];i++)
+    //   printf("ss_buffer (%ld,%ld,%ld)\t",receive_buff[i].x,receive_buff[i].y,receive_buff[i].z);
+    // printf("\n");
     packer.transfer_buffer_to_GPU2(receive_buff,num_receive[dim_id], dim_id, p_domain->sub_box_lattice_size, p_domain->neighbour_local_sub_box, next_sector.id);
     packer.onReceive2(receive_buff, num_receive[dim_id], dim_id, exchange_surface_x, exchange_surface_y, exchange_surface_z,
                 p_domain->sub_box_lattice_size, p_domain->neighbour_local_sub_box, next_sector.id, p_domain);
