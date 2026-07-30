@@ -45,6 +45,7 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
     p_model->p_domain->sub_box_lattice_size[2]);
   }
   MPI_Barrier(SimulationDomain::comm_sim_pro.comm);
+  resetGpuCommMaintenanceProfiler();
   // 扇区的执行顺序是 0, 7, 2, 5, 3, 4, 1, 6
   time_total_start = MPI_Wtime();
   const int64_t TEST_STEPS = 1;
@@ -151,8 +152,36 @@ void SubLattice::startTimeLoop(Ins pk_inst, ModelAdapter<E> *p_model, EventHooks
   // MPI_Reduce(&time_barrier_total, &local_to_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
   // if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " barrier time is : {} s. \n", local_to_total / SimulationDomain::comm_sim_pro.all_ranks);
 
-  MPI_Reduce(&time_commu_total, &local_to_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
-  if(SimulationDomain::comm_sim_pro.own_rank == 0) kiwi::logs::v(" ", " communicate time is : {} s. \n", local_to_total / SimulationDomain::comm_sim_pro.all_ranks);
+  double local_comm_total = 0.0;
+  double local_comm_sync_total = 0.0;
+  double local_h2d_total = 0.0;
+  double local_hash_update_total = 0.0;
+  double local_rebuild_cleanup_total = 0.0;
+  const GpuCommMaintenanceProfiler gpu_comm_profiler = getGpuCommMaintenanceProfiler();
+  const double h2d_time = gpu_comm_profiler.h2d_time;
+  const double hash_update_time = gpu_comm_profiler.hash_update_time;
+  const double rebuild_cleanup_time = gpu_comm_profiler.rebuild_cleanup_time;
+  const double post_gpu_maintenance_time = hash_update_time + rebuild_cleanup_time;
+  const double comm_sync_time = time_commu_total > post_gpu_maintenance_time
+                                  ? time_commu_total - post_gpu_maintenance_time
+                                  : 0.0;
+  MPI_Reduce(&time_commu_total, &local_comm_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  MPI_Reduce(&comm_sync_time, &local_comm_sync_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  MPI_Reduce(&h2d_time, &local_h2d_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  MPI_Reduce(&hash_update_time, &local_hash_update_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  MPI_Reduce(&rebuild_cleanup_time, &local_rebuild_cleanup_total, 1, MPI_DOUBLE, MPI_SUM, 0, SimulationDomain::comm_sim_pro.comm);
+  if(SimulationDomain::comm_sim_pro.own_rank == 0) {
+    const double avg_comm_total = local_comm_total / SimulationDomain::comm_sim_pro.all_ranks;
+    const double avg_comm_sync = local_comm_sync_total / SimulationDomain::comm_sim_pro.all_ranks;
+    const double avg_h2d = local_h2d_total / SimulationDomain::comm_sim_pro.all_ranks;
+    const double avg_hash_update = local_hash_update_total / SimulationDomain::comm_sim_pro.all_ranks;
+    const double avg_rebuild_cleanup = local_rebuild_cleanup_total / SimulationDomain::comm_sim_pro.all_ranks;
+    kiwi::logs::v(" ", " communicate time is : {} s. \n", avg_comm_total);
+    kiwi::logs::v(" ", " >>> [Performance] communicate sync time (CPU pack + MPI + CPU unpack + H2D) is : {} s. \n", avg_comm_sync);
+    kiwi::logs::v(" ", " >>> [Performance] communicate H2D time is : {} s. \n", avg_h2d);
+    kiwi::logs::v(" ", " >>> [Performance] post-communication GPU hash update time is : {} s. \n", avg_hash_update);
+    kiwi::logs::v(" ", " >>> [Performance] post-communication pair atoms rebuild submit/cleanup time is : {} s. \n", avg_rebuild_cleanup);
+  }
 }
 
 template <typename E> int SubLattice::initGPUHashSetWrapper(ModelAdapter<E> *p_model, const type_sector_id sector_id, int sect){
