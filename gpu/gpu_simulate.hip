@@ -1,5 +1,6 @@
 
 #include "gpu_simulate.h"
+#include <mpi.h>
 
 #ifndef SHOW_GPU_LOG
     #define printf(...) ((void)0)
@@ -75,7 +76,16 @@ namespace gpuSimulate {
 
     unsigned long long int* d_Global_Bitmap_Lock = nullptr;
     size_t bitmap_lock_bytes = 0;
+    GpuCommMaintenanceProfiler comm_gpu_maintenance_profiler;
 
+}
+
+void resetGpuCommMaintenanceProfiler() {
+    gpuSimulate::comm_gpu_maintenance_profiler = GpuCommMaintenanceProfiler{};
+}
+
+GpuCommMaintenanceProfiler getGpuCommMaintenanceProfiler() {
+    return gpuSimulate::comm_gpu_maintenance_profiler;
 }
 // =================================================================================
 //[防线 L1] 组内冲突拦截器 (Intra-Tile Resolvers)
@@ -4143,7 +4153,10 @@ using namespace gpuSimulate;
 
       ChangeLattice_GPU *d_buffer;
       HANDLE_HIP(hipMalloc((void**)&d_buffer,sizeof(ChangeLattice_GPU)*receive_len));
+      const double h2d_start = MPI_Wtime();
       HANDLE_HIP(hipMemcpy(d_buffer,h_buffer,sizeof(ChangeLattice_GPU)*receive_len,hipMemcpyHostToDevice));
+      gpuSimulate::comm_gpu_maintenance_profiler.h2d_time += MPI_Wtime() - h2d_start;
+      const double hash_update_start = MPI_Wtime();
       int blockSize = 256;
       int blockNum = (receive_len)/blockSize + 1;
       if (d_Global_Bitmap_Lock != nullptr && bitmap_lock_bytes > 0) {
@@ -4163,11 +4176,14 @@ using namespace gpuSimulate;
         neighbour_local_sub_box[2]
       );
       hipDeviceSynchronize();
+      gpuSimulate::comm_gpu_maintenance_profiler.hash_update_time += MPI_Wtime() - hash_update_start;
     // HANDLE_HIP(hipMemset(g_Pair_Atoms, 0xFF, pair_atoms_size * sizeof(long int)*2));
+    const double rebuild_cleanup_start = MPI_Wtime();
     hipLaunchKernelGGL(update_Pair_Atoms, 1, 1, 0, 0, pair_atoms_size
                       );
     hipFree(d_buffer);
     hipHostFree(h_buffer);
+    gpuSimulate::comm_gpu_maintenance_profiler.rebuild_cleanup_time += MPI_Wtime() - rebuild_cleanup_start;
     // hipLaunchKernelGGL(update_Pair_Atoms, 1, 1, 0, 0, arr_size);
     // hipDeviceSynchronize();
 }
@@ -4182,7 +4198,10 @@ using namespace gpuSimulate;
 
     ChangeLattice_GPU *d_buffer;
     HANDLE_HIP(hipMalloc((void**)&d_buffer,sizeof(ChangeLattice_GPU)*receive_len));
+    const double h2d_start = MPI_Wtime();
     HANDLE_HIP(hipMemcpy(d_buffer,h_buffer,sizeof(ChangeLattice_GPU)*receive_len,hipMemcpyHostToDevice));
+    gpuSimulate::comm_gpu_maintenance_profiler.h2d_time += MPI_Wtime() - h2d_start;
+    const double hash_update_start = MPI_Wtime();
     
     if (d_Global_Bitmap_Lock != nullptr && bitmap_lock_bytes > 0) {
         HANDLE_HIP(hipMemset(d_Global_Bitmap_Lock, 0, bitmap_lock_bytes));
@@ -4204,12 +4223,15 @@ using namespace gpuSimulate;
       neighbour_local_sub_box[2]
     );
     hipDeviceSynchronize();
+    gpuSimulate::comm_gpu_maintenance_profiler.hash_update_time += MPI_Wtime() - hash_update_start;
     // HANDLE_HIP(hipMemset(g_Pair_Atoms, 0xFF, arr_size * sizeof(long int)));
     // HANDLE_HIP(hipMemset(g_Pair_Atoms, 0xFF, pair_atoms_size * sizeof(long int)*2));
+    const double rebuild_cleanup_start = MPI_Wtime();
     hipLaunchKernelGGL(update_Pair_Atoms, 1, 1, 0, 0, pair_atoms_size
                       );
     hipFree(d_buffer);
     hipHostFree(h_buffer);
+    gpuSimulate::comm_gpu_maintenance_profiler.rebuild_cleanup_time += MPI_Wtime() - rebuild_cleanup_start;
     // hipDeviceSynchronize();
     // // printf("------this is end print-----\n");
     // // hipLaunchKernelGGL(print_g_Pair_Atoms,1,1,0,0,arr_size);

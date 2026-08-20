@@ -58,6 +58,15 @@ void add_surface(_type_lattice_id& surface_id,
                  
 void output_time();
 
+struct GpuCommMaintenanceProfiler {
+  double h2d_time = 0.0;
+  double hash_update_time = 0.0;
+  double rebuild_cleanup_time = 0.0;
+};
+
+void resetGpuCommMaintenanceProfiler();
+GpuCommMaintenanceProfiler getGpuCommMaintenanceProfiler();
+
 __device__ LatticeTypes::lat_type getType(const long int& id);
 
 void transferBufferToGPU(ChangeLattice *buffer, int receive_len, const int dimension,
