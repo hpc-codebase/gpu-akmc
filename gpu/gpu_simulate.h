@@ -58,6 +58,7 @@ void add_surface(_type_lattice_id& surface_id,
                  
 void output_time();
 
+//通信后处理阶段耗时统计
 struct GpuCommMaintenanceProfiler {
   double h2d_time = 0.0;
   double hash_update_time = 0.0;

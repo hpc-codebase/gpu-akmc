@@ -381,7 +381,7 @@ __device__ __noinline__ int tiled_contains_op(GPUHashSet* set, long int key, Til
 // ---------------------------------------------------------
 template <typename TileType>
 __device__ int tiled_insert_op(GPUHashSet* set, long int key, TileType tile, bool active, int max_probes) {
-    int final_result = 0;
+    int final_result = 0; 
     const unsigned int probe_limit = hash_effective_max_probes(set->num_buckets);
     const unsigned int effective_max_probes =
         max_probes < static_cast<int>(probe_limit) ? static_cast<unsigned int>(max_probes) : probe_limit;
@@ -474,7 +474,7 @@ __device__ int tiled_remove_op(GPUHashSet* set, long int key, TileType tile, boo
     const unsigned int probe_limit = hash_effective_max_probes(set->num_buckets);
     const unsigned int effective_max_probes =
         max_probes < static_cast<int>(probe_limit) ? static_cast<unsigned int>(max_probes) : probe_limit;
-    uint64_t work_mask = tile.ballot(active);
+    uint64_t work_mask = tile.ballot(active); 
     while (work_mask != 0) {
         int leader = __ffsll((unsigned long long int)work_mask) - 1;
         // long int leader_key = tile.shfl(key, leader);

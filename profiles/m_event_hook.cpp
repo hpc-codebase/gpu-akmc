@@ -82,6 +82,33 @@ void MEventHook::onStepFinished(unsigned long step) {
       dump.dump(dump_file_path, p_lattice_list, step);
     }
   }
+
+//   bool should_dump =
+//     step == 0 ||
+//     step == 1 ||
+//     step == 2 ||
+//     step == 5 ||
+//     step == 10 ||
+//     step == 20 ||
+//     step == 40 ||
+//     step == 60 ||
+//     step == 80 ||
+//     step == 99;
+
+// if (should_dump) {
+//   p_lattice_list->update_hash_CPU();
+
+//   std::string dump_file_path = fmt::format(output_config.dump_file_path, step);
+//   const kiwi::mpi_process process = SimulationDomain::kiwi_sim_pro;
+//   if (process.all_ranks != 1) {
+//     dump_file_path = fmt::format(output_config.dump_file_path + ".{}", step, process.own_rank);
+//   }
+
+//   kiwi::logs::v("dump", "dumping to file {} at step {}.\n", dump_file_path, step);
+
+//   LatticeDump dump;
+//   dump.dump(dump_file_path, p_lattice_list, step);
+// }
 }
 
 void MEventHook::onAllDone() {}
